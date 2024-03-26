@@ -2,20 +2,19 @@ import sys
 import time
 import psutil
 import wmi
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSlider
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSlider, QPushButton
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 
 class SystemMonitor(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout()
+
         self.cpu_label = QLabel("CPU Usage: ")
         self.memory_label = QLabel("Memory Usage: ")
         self.network_label = QLabel("Network Stats:")
-        layout.addWidget(self.cpu_label)
-        layout.addWidget(self.memory_label)
-        layout.addWidget(self.network_label)
+        self.battery_label = QLabel("Battery: ")
 
         self.brightness_slider = QSlider(Qt.Horizontal)
         self.brightness_slider.setMinimum(0)
@@ -24,8 +23,17 @@ class SystemMonitor(QWidget):
         self.brightness_slider.setTickInterval(10)
         self.brightness_slider.setTickPosition(QSlider.TicksBelow)
         self.brightness_slider.valueChanged.connect(self.update_brightness)
+
+        self.energy_saving_button = QPushButton("Activate Energy Saving Mode")
+        self.energy_saving_button.clicked.connect(self.toggle_energy_saving_mode)
+
+        layout.addWidget(self.cpu_label)
+        layout.addWidget(self.memory_label)
+        layout.addWidget(self.network_label)
+        layout.addWidget(self.battery_label)
         layout.addWidget(QLabel("Screen Brightness:"))
         layout.addWidget(self.brightness_slider)
+        layout.addWidget(self.energy_saving_button)
 
         self.setLayout(layout)
 
@@ -44,9 +52,13 @@ class SystemMonitor(QWidget):
         if current_time - self.last_network_update >= self.network_update_interval:
             cpu_percent = psutil.cpu_percent()
             memory_percent = psutil.virtual_memory().percent
+            battery_percent = psutil.sensors_battery().percent if psutil.sensors_battery() else "Unknown"
             self.cpu_label.setText("CPU Usage: {}%".format(cpu_percent))
             self.memory_label.setText("Memory Usage: {}%".format(memory_percent))
-
+            if battery_percent < 15:
+                self.battery_label.setText(f"Low Battery: {battery_percent}%🪫")
+            else:
+                self.battery_label.setText(f"Battery: {battery_percent}%🔋")
             net_io_counters = psutil.net_io_counters()
             time_elapsed = current_time - self.prev_time
             self.prev_time = current_time
@@ -74,6 +86,15 @@ class SystemMonitor(QWidget):
             speed /= 1024
             unit_index += 1
         return "{:.2f} {}".format(speed, units[unit_index])
+    
+    def toggle_energy_saving_mode(self):
+        current_mode = psutil.virtual_power_management().mode
+        if current_mode == "energy_saving":
+            psutil.virtual_power_management().mode = "balanced"
+            self.energy_saving_button.setText("Activate Energy Saving Mode")
+        else:
+            psutil.virtual_power_management().mode = "energy_saving"
+            self.energy_saving_button.setText("Deactivate Energy Saving Mode")
 
     def update_brightness(self):
         brightness_value = self.brightness_slider.value()
