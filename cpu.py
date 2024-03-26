@@ -4,6 +4,7 @@ import psutil
 import wmi
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSlider
 from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QIcon
 
 class SystemMonitor(QWidget):
     def __init__(self):
@@ -92,7 +93,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("System Monitor")
-
+        self.setWindowIcon(QIcon("icon.png"))
+        
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout()
