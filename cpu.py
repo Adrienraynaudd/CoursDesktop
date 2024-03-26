@@ -27,16 +27,6 @@ class SystemMonitor(QWidget):
         layout.addWidget(QLabel("Screen Brightness:"))
         layout.addWidget(self.brightness_slider)
 
-        self.fan_speed_slider = QSlider(Qt.Horizontal)
-        self.fan_speed_slider.setMinimum(0)
-        self.fan_speed_slider.setMaximum(100)
-        self.fan_speed_slider.setValue(100)
-        self.fan_speed_slider.setTickInterval(10)
-        self.fan_speed_slider.setTickPosition(QSlider.TicksBelow)
-        self.fan_speed_slider.valueChanged.connect(self.update_fan_speed)
-        layout.addWidget(QLabel("Fan Speed:"))
-        layout.addWidget(self.fan_speed_slider)
-
         self.setLayout(layout)
 
         self.timer = QTimer(self)
@@ -76,12 +66,6 @@ class SystemMonitor(QWidget):
                 self.last_network_update = current_time
             else:
                 self.network_label.setText("Network Stats:\nUnable to calculate speed due to short time interval or no network activity.")
-
-
-    def update_fan_speed(self):
-        fan_speed = self.fan_speed_slider.value()
-        # Update fan speed...
-        print(f"Setting fan speed to: {fan_speed}")
 
     def format_speed(self, speed):
         units = ['B/s', 'KB/s', 'MB/s', 'GB/s']
