@@ -1,6 +1,32 @@
 import sys
 import re
+import platform
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QComboBox, QVBoxLayout, QWidget
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QMessageBox
+
+#!/usr/bin/env python3
+"""
+Read_Art.py
+rajouter desktop pour lancer en mode interface graphique.
+
+General description:
+Ce script contient une application qui permet à l'utilisateur de consulter les articles de la Déclaration des droits de l'Homme. Il propose deux modes d'exécution : console et interface graphique (desktop).
+
+En mode console, l'utilisateur peut saisir un numéro d'article pour afficher le texte correspondant dans la console.
+En mode interface graphique, l'utilisateur peut choisir un article à partir d'un menu déroulant pour afficher le texte de l'article dans une fenêtre graphique.
+
+Le script utilise PySide6 pour l'interface graphique et lit les articles à partir d'un fichier texte nommé "declaration1789.txt".
+"""
+
+current_os = platform.system()
+
+if current_os != "Windows":
+    app = QApplication(sys.argv)
+    error_message = "Cette application ne fonctionne que sous Windows."
+    QMessageBox.critical(None, "Erreur", error_message)
+    sys.exit()
+
 
 def lire_article(num_article):
     fichier = "declaration1789.txt"
@@ -61,6 +87,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Déclaration des droits de l'Homme")
         self.setGeometry(100, 100, 400, 300)
 
+        self.setWindowIcon(QIcon("cartman.jpg"))
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
