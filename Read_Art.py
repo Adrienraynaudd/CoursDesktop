@@ -8,7 +8,10 @@ from PySide6.QtWidgets import QMessageBox
 #!/usr/bin/env python3
 """
 Read_Art.py
-rajouter desktop pour lancer en mode interface graphique.
+dans le dossier COURSDESKTOP
+faites cette commande pour aller dans l'environnement : .\env\Scripts\Activate.ps1
+puis faites ceete commande pour lancer le script en mode interface graphique : python Read_Art.py desktop
+ou bien faites cette commande pour lancer le script en mode console : python Read_Art.py
 
 General description:
 Ce script contient une application qui permet à l'utilisateur de consulter les articles de la Déclaration des droits de l'Homme. Il propose deux modes d'exécution : console et interface graphique (desktop).
@@ -21,7 +24,7 @@ Le script utilise PySide6 pour l'interface graphique et lit les articles à part
 
 current_os = platform.system()
 
-if current_os != "Windows":
+if current_os != "Windows" and current_os != "Linux":
     app = QApplication(sys.argv)
     error_message = "Cette application ne fonctionne que sous Windows."
     QMessageBox.critical(None, "Erreur", error_message)
