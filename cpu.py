@@ -1,10 +1,12 @@
+import os
 import sys
 import time
 import psutil
 import wmi
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSlider, QPushButton
+import subprocess
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSlider, QCheckBox,QPushButton
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtGui import QIcon
 
 class SystemMonitor(QWidget):
     def __init__(self):
@@ -24,8 +26,9 @@ class SystemMonitor(QWidget):
         self.brightness_slider.setTickPosition(QSlider.TicksBelow)
         self.brightness_slider.valueChanged.connect(self.update_brightness)
 
-        self.energy_saving_button = QPushButton("Activate Energy Saving Mode")
-        self.energy_saving_button.clicked.connect(self.toggle_energy_saving_mode)
+        self.update_button = QPushButton("Activer Notifications de Mise à Jour")
+        self.update_button.setCheckable(True)
+        self.update_button.toggled.connect(self.toggle_update_notifications)
 
         layout.addWidget(self.cpu_label)
         layout.addWidget(self.memory_label)
@@ -33,7 +36,7 @@ class SystemMonitor(QWidget):
         layout.addWidget(self.battery_label)
         layout.addWidget(QLabel("Screen Brightness:"))
         layout.addWidget(self.brightness_slider)
-        layout.addWidget(self.energy_saving_button)
+        layout.addWidget(self.update_button)
 
         self.setLayout(layout)
 
@@ -79,6 +82,12 @@ class SystemMonitor(QWidget):
             else:
                 self.network_label.setText("Network Stats:\nUnable to calculate speed due to short time interval or no network activity.")
 
+    def toggle_update_notifications(self, checked):
+        if checked:
+            print("Notifications de mises à jour activées")
+        else:
+            print("Notifications de mises à jour désactivées")
+
     def format_speed(self, speed):
         units = ['B/s', 'KB/s', 'MB/s', 'GB/s']
         unit_index = 0
@@ -86,15 +95,6 @@ class SystemMonitor(QWidget):
             speed /= 1024
             unit_index += 1
         return "{:.2f} {}".format(speed, units[unit_index])
-    
-    def toggle_energy_saving_mode(self):
-        current_mode = psutil.virtual_power_management().mode
-        if current_mode == "energy_saving":
-            psutil.virtual_power_management().mode = "balanced"
-            self.energy_saving_button.setText("Activate Energy Saving Mode")
-        else:
-            psutil.virtual_power_management().mode = "energy_saving"
-            self.energy_saving_button.setText("Deactivate Energy Saving Mode")
 
     def update_brightness(self):
         brightness_value = self.brightness_slider.value()
