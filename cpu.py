@@ -4,12 +4,47 @@ import time
 import psutil
 import wmi
 import subprocess
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSlider, QCheckBox,QPushButton
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QSlider, QCheckBox, QPushButton, QListWidget, QTabWidget, QTreeWidgetItem, QTreeWidget
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QIcon
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-class SystemMonitor(QWidget):
+# Widget pour afficher le graphique d'utilisation du CPU
+class CPUGraph(QWidget):
     def __init__(self):
+        super().__init__()
+        self.figure, self.ax = plt.subplots()
+        self.canvas = FigureCanvas(self.figure)
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+
+    def update_graph(self, cpu_percent):
+        self.ax.clear()
+        self.ax.plot(cpu_percent)
+        self.ax.set_title('CPU Usage (%)')
+        self.canvas.draw()
+
+# Widget pour afficher le graphique d'utilisation de la mémoire
+class MemoryGraph(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.figure, self.ax = plt.subplots()
+        self.canvas = FigureCanvas(self.figure)
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+
+    def update_graph(self, memory_percent):
+        self.ax.clear()
+        self.ax.plot(memory_percent)
+        self.ax.set_title('Memory Usage (%)')
+        self.canvas.draw()
+
+# Widget principal pour surveiller le système
+class SystemMonitor(QWidget):
+    def __init__(self, wmi_instance):
         super().__init__()
         layout = QVBoxLayout()
 
@@ -18,6 +53,7 @@ class SystemMonitor(QWidget):
         self.network_label = QLabel("Network Stats:")
         self.battery_label = QLabel("Battery: ")
 
+        self.wmi = wmi_instance
         self.brightness_slider = QSlider(Qt.Horizontal)
         self.brightness_slider.setMinimum(0)
         self.brightness_slider.setMaximum(100)
@@ -26,29 +62,31 @@ class SystemMonitor(QWidget):
         self.brightness_slider.setTickPosition(QSlider.TicksBelow)
         self.brightness_slider.valueChanged.connect(self.update_brightness)
 
-        self.update_button = QPushButton("Activer Notifications de Mise à Jour")
-        self.update_button.setCheckable(True)
-        self.update_button.toggled.connect(self.toggle_update_notifications)
-
         layout.addWidget(self.cpu_label)
         layout.addWidget(self.memory_label)
         layout.addWidget(self.network_label)
         layout.addWidget(self.battery_label)
         layout.addWidget(QLabel("Screen Brightness:"))
         layout.addWidget(self.brightness_slider)
-        layout.addWidget(self.update_button)
 
         self.setLayout(layout)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_system_info)
-        self.wmi = wmi.WMI(namespace='wmi')
-        self.timer.start(1000)
+        self.timer.start(700)
 
         self.prev_net_io_counters = psutil.net_io_counters()
         self.prev_time = psutil.boot_time()
         self.last_network_update = 0
         self.network_update_interval = 0.5
+
+        self.cpu_graph = CPUGraph()
+        self.memory_graph = MemoryGraph()
+        layout.addWidget(self.cpu_graph)
+        layout.addWidget(self.memory_graph)
+
+        self.cpu_percent_data = []
+        self.memory_percent_data = []
 
     def update_system_info(self):
         current_time = time.time()
@@ -80,7 +118,18 @@ class SystemMonitor(QWidget):
                 self.prev_net_io_counters = net_io_counters
                 self.last_network_update = current_time
             else:
-                self.network_label.setText("Network Stats:\nUnable to calculate speed due to short time interval or no network activity.")
+                # Afficher les statistiques réseau précédentes
+                download_speed_str = self.format_speed((net_io_counters.bytes_recv - self.prev_net_io_counters.bytes_recv) / time_elapsed)
+                upload_speed_str = self.format_speed((net_io_counters.bytes_sent - self.prev_net_io_counters.bytes_sent) / time_elapsed)
+
+                network_stats = "Download: {}\nUpload: {}\n".format(download_speed_str, upload_speed_str)
+
+                self.network_label.setText("Network Stats:\n{}".format(network_stats))
+
+        self.cpu_percent_data.append(cpu_percent)
+        self.memory_percent_data.append(memory_percent)
+        self.cpu_graph.update_graph(self.cpu_percent_data)
+        self.memory_graph.update_graph(self.memory_percent_data)
 
     def toggle_update_notifications(self, checked):
         if checked:
@@ -106,20 +155,64 @@ class SystemMonitor(QWidget):
         for methods in self.wmi.WmiMonitorBrightnessMethods():
             methods.WmiSetBrightness(brightness, 0)
 
+# Widget pour afficher les logiciels en arrière-plan
+class LogicielsWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+        self.logiciels_label = QLabel("Logiciels en arrière-plan:")
+        layout.addWidget(self.logiciels_label)
+        self.tree_logiciels = QTreeWidget()
+        self.tree_logiciels.setHeaderLabels(["Nom du Processus", "Utilisateur", "CPU", "Mémoire", "Disque"])
+        layout.addWidget(self.tree_logiciels)
+        self.setLayout(layout)
+        self.update_logiciels()
+
+    def update_logiciels(self):
+        self.tree_logiciels.clear()
+        for proc in psutil.process_iter(['pid', 'name', 'username']):
+            try:
+                pinfo = proc.info
+                item = QTreeWidgetItem([pinfo['name'], pinfo['username'], '', '', ''])
+                cpu_percent = proc.cpu_percent()
+                memory_info = proc.memory_info()
+                disk_info = proc.io_counters()
+                item.setData(2, Qt.DisplayRole, f"{cpu_percent}%")
+                item.setData(3, Qt.DisplayRole, f"{memory_info.rss / (1024 * 1024):.2f} MB")
+                item.setData(4, Qt.DisplayRole, f"{disk_info.read_bytes / (1024 * 1024):.2f} MB")
+                self.tree_logiciels.addTopLevelItem(item)
+            except psutil.NoSuchProcess:
+                pass
+
+# Fenêtre principale de l'application
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("System Monitor")
         self.setWindowIcon(QIcon("icon.png"))
-        central_widget = QWidget()
+
+        central_widget = QTabWidget()
+        # Vérifie si le système d'exploitation est Windows
+        if sys.platform == 'win32':
+            system_monitor = SystemMonitor(wmi.WMI(namespace='wmi'))
+            logiciels_widget = LogicielsWidget()
+        else:
+            # Affiche un avertissement si le système d'exploitation n'est pas Windows
+            warning_label = QLabel("Cette fonctionnalité est disponible uniquement sur Windows.")
+            logiciels_widget = QWidget()
+            layout = QVBoxLayout()
+            layout.addWidget(warning_label)
+            logiciels_widget.setLayout(layout)
+            system_monitor = None
+
+        # Ajoute les onglets à la fenêtre principale
+        central_widget.addTab(system_monitor, "Système")
+        central_widget.addTab(logiciels_widget, "Logiciels")
+
         self.setCentralWidget(central_widget)
-        layout = QVBoxLayout()
-        central_widget.setLayout(layout)
 
-        system_monitor = SystemMonitor()
-        layout.addWidget(system_monitor)
-
+# Point d'entrée de l'application
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
