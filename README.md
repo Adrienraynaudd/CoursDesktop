@@ -3,10 +3,12 @@ System Monitor est une application Python qui surveille les performances systèm
 
 ## Fonctionnalités
 Surveillance en temps réel de l'utilisation du processeur et de la mémoire.
+affiche en graphique de l'utilisation du processeur et de la mémoire.
 Affichage des statistiques réseau, y compris les vitesses de téléchargement et de téléversement.
 Indication du niveau de batterie avec une alerte en cas de batterie faible.
 Réglage de la luminosité de l'écran.
-Activation/désactivation des notifications de mises à jour.
+deuxième onglet avec les logiciel en arrière plan et l'utilisateur qui à lancer le logiciel
+l'utilisation de la mémoire du disque et du cpu par logiciel
 
 ## Installation
 Clonez ce dépôt sur votre machine locale :
